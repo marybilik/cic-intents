@@ -1,0 +1,26 @@
+Creative Commons Attribution 4.0 International Public License
+(CC BY 4.0)
+
+This license applies to the data splits, test-set predictions, and
+derived metrics distributed in this repository, EXCEPT for the original
+raw text, which is governed by the terms of its source datasets:
+
+  - Email:    E-PhishGen (Pajola et al., 2025)
+              https://huggingface.co/datasets/pajola/e-phishGen
+  - SMS:      Smishing-IMC25 (Agarwal et al., 2025)
+              https://github.com/reportsmishing/Smishing-Dataset-IMC25
+  - Telegram: MuLTa-Telegram (Leonardelli et al., 2025)
+              https://github.com/dhfbk/MuLTa-Telegram
+  - Forum:    scraped from public Italian forums, annotated by us
+
+Redistributed artefacts (model predictions, embeddings, metrics,
+train/val/test splits) are released under CC BY 4.0.
+
+The full legal text of the CC BY 4.0 license is available at:
+https://creativecommons.org/licenses/by/4.0/legalcode
+
+Attribution notice:
+
+  "CIC-Intents data artefacts" by Mariia Bilikhodze, University of Pavia,
+  are licensed under CC BY 4.0.
+  Original repository: https://github.com/marybilik/cic-intents
