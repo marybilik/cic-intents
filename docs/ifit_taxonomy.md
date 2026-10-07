@@ -110,8 +110,9 @@ register of the channel.
 
 ## Notes on annotation
 
-- Annotations produced with `openai/gpt-oss-120b` via the Groq API,
-  zero-shot prompt, checkpointed every 25 documents.
+- Annotations produced with Google Gemini (`gemini-flash-latest`,
+  auto-discovered at runtime from a priority list), zero-shot prompt,
+  checkpointed every 25 documents.
 - Full prompt in [`annotation_prompt.md`](annotation_prompt.md).
 - Validated on a random 10% sample.
 - Multilabel: each document may carry 0 (legitimate), 1, or more intents.
