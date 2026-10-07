@@ -1,135 +1,183 @@
 # IFIT Annotation Prompt
 
 This is the exact zero-shot prompt used to annotate 950 documents with
-the Italian Fraud Intent Taxonomy (IFIT). The prompt was sent to
-`openai/gpt-oss-120b` via the Groq API.
+the Italian Fraud Intent Taxonomy (IFIT). Annotation was performed via
+the **Google Gemini API** (`gemini-flash-latest`, with runtime fallback
+to alternative models if quota is exhausted).
 
-## System prompt
-You are an expert annotator for Italian fraud detection research.
-You will be given a short Italian text (email, SMS, or forum post).
-Your task is to identify which manipulation intents are present.
+## Model selection
 
-The intent taxonomy has 12 categories, split into two families:
+At runtime the notebook auto-discovers the first working model from
+this list:
 
-EXPLICIT (what the attacker asks for):
+| Priority | Model name |
+|---|---|
+| 1 | `gemini-flash-latest` |
+| 2 | `gemini-2.5-flash` |
+| 3 | `gemini-2.5-flash-lite` |
+| 4 | `gemini-flash-lite-latest` |
+| 5 | `gemini-2.0-flash-001` |
+| 6 | `gemini-2.0-flash-lite` |
 
-credential_request : asks for passwords, PINs, OTP, SPID, access codes
+Both `v1beta` and `v1` API versions are tried. The first model that
+returns HTTP 200 is used for the entire annotation run.
 
-payment_request : asks for a payment, bank transfer, credit card
-
-data_request : asks for personal data (name, address, tax code)
-
-click_request : asks the user to click a link or download an attachment
-
-call_request : asks the user to call a phone number
-
-IMPLICIT (how the attacker manipulates):
-
-urgency : time pressure ("act now", "within 24 hours")
-
-authority : invokes a trusted institution
-
-fear : threatens negative consequences
-
-greed : promises a reward, prize, refund
-
-impersonation : pretends to be a known entity or person
-
-social_proof : claims others have already complied
-
-reciprocity : offers something small in exchange for compliance
-
-Rules:
-
-Return ONLY a comma-separated list of intent codes.
-
-If no intent applies, return the single token: NONE
-
-Do not explain. Do not add quotes. Do not add any other text.
-
-A document may have 0, 1, or many intents.
-
-Prioritise precision over recall: only assign an intent if the
-evidence in the text is explicit.
-
-
-## User prompt (per document)
-
-Text (channel: {channel}):
-{text_clean}
-
-Intents:
-
-text
-
-Where `{channel}` is one of `email`, `sms`, `telegram`, `forum`, and
-`{text_clean}` is the preprocessed text (see `data_sources.md`).
-
-## Parsing
-
-The raw model output is parsed with the following logic:
+## Generation config
 
 ```python
-def parse_intents(raw_answer: str) -> list[str]:
-    """Return a list of valid IFIT codes, or [] if NONE."""
-    raw = raw_answer.strip().upper()
-    if raw == "NONE" or raw == "" or raw.startswith("NONE"):
+{
+    "temperature": 0.0,
+    "maxOutputTokens": 200,
+}
+Input text is truncated to 2000 characters (text[:2000]) before
+being sent.
+
+Prompt (Italian, as used in the paper)
+The prompt is formulated in Italian and includes the full IFIT taxonomy
+inline as a bulleted list, followed by four strict rules.
+
+text
+Analizza il testo e identifica TUTTI gli intenti fraudolenti.
+
+CODICI:
+- credential_request: Richiesta login/password/PIN/SPID
+- payment_request: Richiesta pagamento/bonifico/dati carta/IBAN
+- data_request: Richiesta codice fiscale/documento/indirizzo
+- click_request: Richiesta click su link/allegato/QR code
+- call_request: Richiesta chiamare un numero/contattare falso supporto
+- urgency: Pressione temporale, scadenza
+- authority: Riferimento a banca/Poste/INPS/polizia/ministero
+- fear: Minaccia: blocco/multa/sanzione/azione legale
+- greed: Promessa premio/bonus/rimborso/regalo
+- impersonation: Fingere di essere conoscente/collega/parente
+- social_proof: Riferimento ad altri utenti
+- reciprocity: Senso di debito ("abbiamo già fatto per te")
+
+REGOLE:
+1. Multi-label (uno o più codici)
+2. Rispondi SOLO con i codici separati da virgola
+3. Se non ci sono intenti: NONE
+4. Nessuna spiegazione
+
+Testo:
+\"\"\"
+{text}
+\"\"\"
+
+Codici:
+Where {text} is the preprocessed text_clean field (see
+data_sources.md for the preprocessing pipeline).
+
+Parsing
+The model output is parsed with a regex that matches IFIT codes as
+word-boundary tokens:
+
+python
+import re
+
+ITALIAN_FRAUD_INTENTS = {
+    'credential_request': 'Richiesta login/password/PIN/SPID',
+    'payment_request':    'Richiesta pagamento/bonifico/dati carta/IBAN',
+    'data_request':       'Richiesta codice fiscale/documento/indirizzo',
+    'click_request':      'Richiesta click su link/allegato/QR code',
+    'call_request':       'Richiesta chiamare un numero/contattare falso supporto',
+    'urgency':            'Pressione temporale, scadenza',
+    'authority':          'Riferimento a banca/Poste/INPS/polizia/ministero',
+    'fear':               'Minaccia: blocco/multa/sanzione/azione legale',
+    'greed':              'Promessa premio/bonus/rimborso/regalo',
+    'impersonation':      'Fingere di essere conoscente/collega/parente',
+    'social_proof':       'Riferimento ad altri utenti',
+    'reciprocity':        'Senso di debito ("abbiamo già fatto per te")',
+}
+INTENT_CODES = list(ITALIAN_FRAUD_INTENTS.keys())
+
+def parse_intents(answer: str) -> list[str]:
+    if not answer:
         return []
-    # split on commas and remove any explanatory text
-    parts = [p.strip() for p in raw.split(",")]
-    valid = []
-    for p in parts:
-        # keep only tokens that match IFIT codes
-        if p in IFIT_CODES:
-            valid.append(p.lower())
-        else:
-            # try to match against code prefixes
-            for code in IFIT_CODES:
-                if code.upper() in p:
-                    if code not in valid:
-                        valid.append(code.lower())
-                    break
-    return valid
+    if re.search(r'\bNONE\b', answer, re.IGNORECASE):
+        return []
+    pattern = '|'.join(re.escape(c) for c in INTENT_CODES)
+    found = re.findall(pattern, answer.lower())
+    seen, unique = set(), []
+    for c in found:
+        if c not in seen:
+            seen.add(c)
+            unique.append(c)
+    return unique
+Rate limiting
+Gemini's free tier allows 15 requests per minute. The annotation
+loop enforces a 4.5-second sleep between requests (~13 RPM, with
+headroom), plus exponential backoff on HTTP 429:
+
+python
+if r.status_code == 429:
+    time.sleep(5 * (2 ** attempt))  # 5, 10, 20 s
+Checkpointing and resumption
+A checkpoint is written to disk every 25 documents.
+
+Two copies are kept: a working copy in the Colab filesystem and a
+backup in Google Drive (/content/drive/MyDrive/fraud_project/).
+
+Interrupted runs are safely resumable: the notebook re-loads the
+checkpoint and skips rows where intent_labels is already a valid
+list representation (i.e., '[...]').
+
+Rows with raw_answer matching failed or error are automatically
+reset and re-annotated on the next run.
+
 Validation
 10% random sample manually verified.
 
-Inter-annotator agreement not measured (single annotator).
+Inter-annotator agreement was not measured (single annotator, single
+model).
 
-Checkpoint written to disk every 25 documents — safe to resume on
-interruption.
+Full annotation log is preserved in annotation_checkpoint.csv with
+text_clean, intent_labels, raw_answer, subset, and is_done
+columns for full traceability.
 
-Full annotation log preserved with raw_answer, annot_id, and
-is_done columns for full traceability.
-
-Reproducing
+Reproducing the annotation
 python
-from groq import Groq
+import os, re, time, requests
 import pandas as pd
 
-client = Groq(api_key="...")  # set GROQ_API_KEY in env
+GEMINI_KEY = os.environ["GEMINI_API_KEY"]
 
-def annotate(text: str, channel: str) -> list[str]:
-    resp = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": f"Text (channel: {channel}):\n{text}\n\nIntents:"},
-        ],
-        temperature=0.0,
-    )
-    return parse_intents(resp.choices[0].message.content)
+CANDIDATES = [
+    'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.5-flash-lite',
+    'gemini-flash-lite-latest', 'gemini-2.0-flash-001', 'gemini-2.0-flash-lite',
+]
 
-df = pd.read_csv("data/corpus.csv")
-for i, row in df.iterrows():
-    if row["is_done"]:
-        continue
-    labels = annotate(row["text_clean"], row["source"])
-    df.at[i, "intent_labels"] = ",".join(labels)
-    df.at[i, "is_done"] = True
-    if i % 25 == 0:
-        df.to_csv("data/corpus_annotated.csv", index=False)
+def discover_model():
+    for api_ver in ('v1beta', 'v1'):
+        for model_name in CANDIDATES:
+            url = (f"https://generativelanguage.googleapis.com/{api_ver}/models/"
+                   f"{model_name}:generateContent?key={GEMINI_KEY}")
+            try:
+                r = requests.post(url, json={
+                    "contents": [{"parts": [{"text": "Reply only with: OK"}]}],
+                    "generationConfig": {"temperature": 0.0, "maxOutputTokens": 10}
+                }, timeout=15)
+                if r.status_code == 200:
+                    return model_name, api_ver
+            except Exception:
+                pass
+    raise RuntimeError("No working Gemini model found.")
+
+MODEL_NAME, API_VER = discover_model()
+URL = (f"https://generativelanguage.googleapis.com/{API_VER}/models/"
+       f"{MODEL_NAME}:generateContent?key={GEMINI_KEY}")
+
+def annotate(text: str) -> tuple[list[str], str]:
+    if not isinstance(text, str) or len(text) < 30:
+        return [], 'skip'
+    payload = {
+        "contents": [{"parts": [{"text": PROMPT.format(text=text[:2000])}]}],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 200},
+    }
+    r = requests.post(URL, json=payload, timeout=30)
+    r.raise_for_status()
+    raw = r.json()['candidates'][0]['content']['parts'][0]['text'].strip()
+    return parse_intents(raw), raw
 Cost note
-At the time of the experiments (2025), the Groq API pricing for
-gpt-oss-120b was ~$0.15 per 1M input tokens. The full 950-document
-annotation cost less than $1.
-
+At the time of the experiments (2025–2026), Google's Gemini free tier
+was used for all 950 documents. Total cost: $0.
