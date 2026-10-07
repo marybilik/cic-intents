@@ -1,0 +1,52 @@
+cff-version: 1.2.0
+message: "If you use this software or data, please cite both the paper and this repository."
+title: "CIC-Intents: Channel-Invariant, Interpretable and Causally Grounded Intent Detection for Italian Multi-Channel Fraud"
+abstract: >
+  Fraud detection systems that operate across multiple communication
+  channels face a structural obstacle: a model trained on one channel
+  rarely survives the move to another. We study this problem in the
+  Italian fraud landscape and propose CIC-Intents, a framework that
+  combines a 12-intent multi-label taxonomy (IFIT), a Multi-Label
+  Supervised Contrastive objective, a kernel MMD regularizer with
+  post-hoc channel centering, and a gradient-based causal attribution
+  procedure based on Probability of Necessity and Sufficiency.
+authors:
+  - family-names: Bilikhodze
+    given-names: Mariia
+    orcid: "https://orcid.org/0009-0000-6968-746X"
+    affiliation: "University of Pavia, Department of Economics and Management"
+    email: mariia.bilikhodze01@universitadipavia.it
+contact:
+  - family-names: Bilikhodze
+    given-names: Mariia
+    orcid: "https://orcid.org/0009-0000-6968-746X"
+    email: mariia.bilikhodze01@universitadipavia.it
+license: MIT
+license-url: "https://opensource.org/licenses/MIT"
+repository-code: "https://github.com/marybilik/cic-intents"
+url: "https://github.com/marybilik/cic-intents"
+keywords:
+  - fraud detection
+  - phishing
+  - smishing
+  - cross-channel generalization
+  - contrastive learning
+  - domain adaptation
+  - Italian NLP
+  - causal attribution
+  - multi-label classification
+version: 1.0.0
+date-released: "2026-10-07"
+preferred-citation:
+  type: article
+  title: "CIC-Intents: Channel-Invariant, Interpretable and Causally Grounded Intent Detection for Italian Multi-Channel Fraud"
+  authors:
+    - family-names: Bilikhodze
+      given-names: Mariia
+      orcid: "https://orcid.org/0009-0000-6968-746X"
+      affiliation: "University of Pavia"
+  journal: "Information Processing & Management"
+  publisher:
+    name: "Elsevier"
+  year: 2026
+  notes: "Manuscript under review"
