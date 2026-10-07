@@ -1,4 +1,4 @@
-# ---- Python ----
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -19,73 +19,55 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
-# ---- Virtual environments ----
-.venv/
+# Virtual environments
 venv/
-ENV/
 env/
-.conda/
+ENV/
+.venv/
 
-# ---- Jupyter ----
+# Jupyter
 .ipynb_checkpoints/
 *.ipynb_checkpoints
-*/.ipynb_checkpoints/*
-profile_default/
-ipython_config.py
 
-# ---- PyTorch / model checkpoints ----
-# Large binary checkpoints — host externally (Kaggle/HF) and link in models/README.md
-*.pt
-*.pth
-*.bin
-*.safetensors
-*.ckpt
-*.h5
-
-# ---- Kaggle / data (do not redistribute raw text) ----
+# Data — keep df_cicl.csv and small CSVs, ignore raw clones
+Smishing-Dataset-IMC25/
+MuLTa-Telegram/
 data/raw/
-data/interim/
-data/processed/
-*.zip
-*.tar.gz
+data/*.json
+data/*.jsonl
 
-# But KEEP the small splits and metrics we explicitly want to ship:
-!data/splits/*.npz
-!data/splits/*.csv
-!data/splits/README.md
-!results/*.csv
-!results/*.json
+# Model checkpoints (large, keep locally)
+models/*.pt
+models/*.pth
+models/*.bin
+models/*.safetensors
 
-# ---- LaTeX aux files ----
-paper/main.aux
-paper/main.bbl
-paper/main.blg
-paper/main.log
-paper/main.out
-paper/main.spl
-paper/main.synctex.gz
-paper/main.fls
-paper/main.fdb_latexmk
+# Results — keep CSV and PNG, ignore large npz/pkl
+results/*.npz
+results/*.pkl
+results/*.h5
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Kaggle / Colab artifacts
+kaggle.json
+.kaggle/
+/content/drive/
+
+# LaTeX build artifacts
 paper/*.aux
 paper/*.bbl
 paper/*.blg
 paper/*.log
 paper/*.out
-paper/*.spl
 paper/*.synctex.gz
 paper/*.fls
 paper/*.fdb_latexmk
-
-# ---- OS junk ----
-.DS_Store
-Thumbs.db
-desktop.ini
-*.swp
-*~
-
-# ---- IDE ----
-.vscode/
-.idea/
-*.code-workspace
