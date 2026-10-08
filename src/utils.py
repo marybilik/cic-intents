@@ -1,16 +1,92 @@
-"""Prediction, embedding extraction, and domain MI utilities."""
+"""Utilities: prediction, CLS extraction, domain MI, multi-hot parsing."""
 
+import ast
+import os
 import numpy as np
 import torch
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.metrics import mutual_info_score, accuracy_score
 from torch.utils.data import DataLoader
 
 from .model import CICLDataset
 
 
+# ----------------------------------------------------------------
+# Constants
+# ----------------------------------------------------------------
+INTENT_CODES = [
+    'credential_request', 'payment_request', 'data_request',
+    'click_request', 'call_request',
+    'urgency', 'authority', 'fear', 'greed',
+    'impersonation', 'social_proof', 'reciprocity',
+]
+N_INTENTS = len(INTENT_CODES)
+MODEL_NAME = "Musixmatch/umberto-commoncrawl-cased-v1"
+CH_NAMES = {0: 'email', 1: 'sms', 3: 'forum'}
+RANDOM_STATE = 42
+
+
+# ----------------------------------------------------------------
+# Paths (env-var driven; falls back to repo-local defaults)
+# ----------------------------------------------------------------
+def data_dir():
+    return os.environ.get('CIC_DATA_DIR', './data/')
+
+
+def ckpt_dir():
+    return os.environ.get('CIC_CKPT_DIR', './models/')
+
+
+def out_dir():
+    return os.environ.get('CIC_OUT_DIR', './results/')
+
+
+# ----------------------------------------------------------------
+# Multi-hot parsing (safe: no eval)
+# ----------------------------------------------------------------
+def parse_multihot(s, n_intents=N_INTENTS):
+    """Parse a multi-hot vector from a CSV cell.
+
+    Accepts numpy arrays, python lists, strings like '[0. 1. 0.]',
+    and strings like 'array([0., 1., 0.])'.
+    """
+    if isinstance(s, np.ndarray):
+        return s.astype(np.float32).ravel()
+
+    if isinstance(s, (list, tuple)):
+        return np.asarray(s, dtype=np.float32)
+
+    if isinstance(s, str):
+        s = s.strip()
+        if s.startswith('array(') and s.endswith(')'):
+            s = s[len('array('):-1]
+        # Replace whitespace-separated floats '0. 1. 0.' with commas
+        if ',' not in s and ' ' in s:
+            s = '[' + ','.join(s.strip('[]').split()) + ']'
+        try:
+            v = ast.literal_eval(s)
+            arr = np.asarray(v, dtype=np.float32).ravel()
+            if arr.shape[0] != n_intents:
+                return np.zeros(n_intents, dtype=np.float32)
+            return arr
+        except (ValueError, SyntaxError):
+            return np.zeros(n_intents, dtype=np.float32)
+
+    return np.zeros(n_intents, dtype=np.float32)
+
+
+def attach_multihot(df, col='multihot', n_intents=N_INTENTS):
+    """Add/replace df['multihot'] with parsed numpy vectors, in place."""
+    df[col] = df[col].apply(lambda s: parse_multihot(s, n_intents))
+    return df
+
+
+# ----------------------------------------------------------------
+# Prediction and CLS extraction
+# ----------------------------------------------------------------
 def predict_proba(model, df, tokenizer, device, max_len=160, batch_size=64):
-    """Return (probs, labels, channels) numpy arrays."""
+    """Return (probs, labels, channels) as numpy arrays."""
     ds = CICLDataset(
         df['text_clean'].values,
         df['multihot'].values,
@@ -31,7 +107,7 @@ def predict_proba(model, df, tokenizer, device, max_len=160, batch_size=64):
 
 
 def get_cls_embeddings(model, df, tokenizer, device, max_len=160,
-                        batch_size=64):
+                       batch_size=64):
     """Return (n, hidden) numpy array of CLS embeddings."""
     ds = CICLDataset(
         df['text_clean'].values,
@@ -50,15 +126,35 @@ def get_cls_embeddings(model, df, tokenizer, device, max_len=160,
     return np.vstack(embs)
 
 
-def domain_mi_cv(embs, channels, n_splits=5):
-    """Domain MI proxy: 5-fold CV accuracy of a logistic-regression
-    channel probe. Higher = more channel information in embeddings.
-    Returns (mean_accuracy, per_fold_scores).
+# ----------------------------------------------------------------
+# Domain MI probe
+# ----------------------------------------------------------------
+def domain_mi_cv(embs, channels, n_splits=5, seed=RANDOM_STATE):
+    """Domain MI proxy.
+
+    Returns (mutual_info_score, probe_accuracy). This matches the notebook
+    protocol used to produce Table 12 in the paper (MI 0.739 -> 0.335).
+
+    Notes:
+      * Uses mutual_info_score (not normalized), consistent with the paper.
+      * n_splits is capped at the smallest non-empty class count, computed
+        via np.unique (not np.bincount, which breaks when channel ids are
+        not contiguous).
+      * LogisticRegression is instantiated with the same hyperparameters as
+        in the notebook (max_iter=3000, class_weight='balanced', seed=42).
     """
-    n_splits = min(n_splits, min(np.bincount(channels)))
+    channels = np.asarray(channels).astype(int)
+    embs = np.asarray(embs, dtype=np.float32)
+
+    unique, counts = np.unique(channels, return_counts=True)
+    n_splits = min(n_splits, int(counts.min()))
     if n_splits < 2:
-        return float('nan'), np.array([])
-    clf = LogisticRegression(max_iter=2000, multi_class='multinomial')
-    scores = cross_val_score(clf, embs, channels, cv=n_splits,
-                              scoring='accuracy')
-    return float(scores.mean()), scores
+        return float('nan'), float('nan')
+
+    clf = LogisticRegression(
+        max_iter=3000, class_weight='balanced', random_state=seed)
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+    preds = cross_val_predict(clf, embs, channels, cv=skf)
+
+    return (float(mutual_info_score(channels, preds)),
+            float(accuracy_score(channels, preds)))
