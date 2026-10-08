@@ -1,119 +1,96 @@
-# IFIT Annotation Prompt (Gemini)
+# Annotation prompt
 
-This is the exact zero-shot prompt used to annotate the 950-document corpus
-with the Italian Fraud Intent Taxonomy (IFIT). The prompt is fully
-reproducible; the model was `gemini-flash-latest`, auto-discovered at
-runtime from a priority list of Gemini Flash models.
+The corpus was annotated zero-shot with **Google Gemini** (`gemini-flash-latest`,
+auto-discovered at runtime from a priority list of Gemini Flash models).
+The same prompt is used in `src/attribution.py --annotate`.
 
-## Model auto-discovery
+## Model discovery
+
+Before annotation, the script probes a priority list of Gemini models
+across two API versions (`v1beta`, `v1`) and picks the first one that
+responds with HTTP 200:
 
 ```python
-PRIORITY_MODELS = [
-    "gemini-flash-latest",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
+CANDIDATES = [
+    'gemini-flash-latest',
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-flash-lite-latest',
+    'gemini-2.0-flash-001',
+    'gemini-2.0-flash-lite',
 ]
-# The first model that responds to a probe call is used for the batch.
+API_VERSIONS = ['v1beta', 'v1']
 ```
 
-## System prompt
+## Prompt template
 
 ```
-You are an expert annotator of phishing and fraud messages in Italian.
-You are given a document (email, SMS, or forum post). Your task is to
-assign one or more intent codes from the Italian Fraud Intent Taxonomy
-(IFIT) described below.
+Analizza il testo e identifica TUTTI gli intenti fraudolenti.
 
-The IFIT has 12 intents split into two families.
+CODICI:
+- credential_request: Richiesta login/password/PIN/SPID
+- payment_request: Richiesta pagamento/bonifico/dati carta/IBAN
+- data_request: Richiesta codice fiscale/documento/indirizzo
+- click_request: Richiesta click su link/allegato/QR code
+- call_request: Richiesta chiamare un numero/contattare falso supporto
+- urgency: Pressione temporale, scadenza
+- authority: Riferimento a banca/Poste/INPS/polizia/ministero
+- fear: Minaccia: blocco/multa/sanzione/azione legale
+- greed: Promessa premio/bonus/rimborso/regalo
+- impersonation: Fingere di essere conoscente/collega/parente
+- social_proof: Riferimento ad altri utenti
+- reciprocity: Senso di debito
 
-EXPLICIT REQUESTS (5) — what the attacker asks the victim to do:
-  credential_request — asks for login credentials, passwords, PINs,
-                       access codes.
-  payment_request    — asks for a payment, bank transfer, or credit
-                       card details.
-  data_request       — asks for personal data (name, address, date of
-                       birth, tax code).
-  click_request      — asks the user to click a link or download an
-                       attachment.
-  call_request       — asks the user to call a phone number.
+REGOLE:
+1. Multi-label (uno o più codici)
+2. Rispondi SOLO con i codici separati da virgola
+3. Se non ci sono intenti: NONE
+4. Nessuna spiegazione
 
-IMPLICIT MANIPULATIONS (7) — how the attacker pressures the victim:
-  urgency       — creates time pressure ("act now", "within 24 hours").
-  authority     — invokes a trusted institution or authority figure.
-  fear          — threatens negative consequences (account blocking,
-                  legal action, loss of funds).
-  greed         — promises a reward, prize, refund, unexpected gain.
-  impersonation — pretends to be a known entity or person.
-  social_proof  — claims that others have already complied or benefited.
-  reciprocity   — offers something small in exchange for compliance.
+Testo:
+"""
+{text}
+"""
 
-RULES:
-1. Return a comma-separated list of intent codes, no explanations.
-2. If the document contains NONE of the above intents, return exactly:
-   NONE
-3. Do NOT invent codes. Only the 12 codes listed above are valid.
-4. A document may have 1 to 12 intents. Use all that apply.
-5. Multi-intent is the norm for fraud messages (mean 2.97 intents per
-   fraud document). Do not artificially restrict to one.
-6. If the document is a forum post that DISCUSSES fraud (mention) rather
-   than COMMITS it (use), still annotate the intent it describes.
-   Forum posts often describe multiple campaigns; annotate the union.
-```
-
-## User prompt template
-
-```
-Document:
-\"\"\"
-{text_clean}
-\"\"\"
-
-Return the intent codes as a comma-separated list, or NONE.
+Codici:
 ```
 
 ## Parser
 
 ```python
-def parse_intent_response(response_text, intent_codes):
-    text = response_text.strip().strip('"').strip("'").upper()
-    if text.startswith("NONE"):
+def parse_answer(ans, intent_codes):
+    if re.search(r'\bNONE\b', ans, re.IGNORECASE):
         return []
-    parts = [p.strip().lower() for p in text.split(",")]
-    valid = [p for p in parts if p in intent_codes]
-    return sorted(set(valid))
+    pattern = '|'.join(re.escape(c) for c in intent_codes)
+    found = re.findall(pattern, ans.lower())
+    seen, uniq = set(), []
+    for c in found:
+        if c not in seen:
+            seen.add(c); uniq.append(c)
+    return uniq
 ```
 
-## Checkpointing
+## Rate limiting
 
-The annotation script writes a checkpoint every 25 documents to
-`data/annotation_checkpoint.csv` with columns:
-
-| column | description |
-|---|---|
-| `text` | raw text |
-| `text_clean` | cleaned text (pipeline v7) |
-| `text_lemma` | lemmatized text |
-| `subset` | one of `email`, `sms`, `forum` |
-| `source` | full source id |
-| `intent_labels` | raw string from Gemini (e.g., `[credential_request, urgency]` or `NONE`) |
-| `n_intents` | integer count |
-| `annotated_at` | ISO timestamp |
-
-Resumability: the script loads the checkpoint, skips rows with a
-non-null `intent_labels`, and continues.
+- Sleep 4.5 s between requests (~13 RPM, below the 15 RPM free-tier limit)
+- Exponential backoff on HTTP 429: 5 s, 10 s, 20 s
+- Checkpoint written every 25 documents
+- Failed rows are reset and retried on the next run
 
 ## Validation
 
-A random 10% sample (95 documents) was manually re-checked. Per-intent
-precision on the sample: 0.91 for explicit requests, 0.84 for implicit
-manipulations. Two failure modes were documented:
+A random 10% sample of the annotated corpus was manually checked for
+label correctness. No inter-annotator agreement study was performed;
+this is acknowledged in the paper (Section 6).
 
-1. **Implicit over-annotation.** Gemini occasionally adds `fear` or
-   `urgency` to messages that only have a mild threat. Mitigation:
-   manual spot-check before training; not corrected in the released
-   corpus (annotated labels are as-is).
-2. **Forum multi-campaign conflations.** A single forum post discussing
-   two campaigns receives the union of both campaigns' intents. This is
-   by design (see rule 6) and does not affect the intent-family
-   comparison in Section 5.9.
+## Reproducibility
+
+To re-annotate from scratch:
+
+```bash
+export GEMINI_API_KEY="..."
+python -m src.attribution --annotate --out ./data/annotation_full.csv
+```
+
+Output format: one row per document with columns
+`text_clean`, `subset`, `source`, `intent_labels` (list), `raw_answer`.
