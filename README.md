@@ -1,184 +1,172 @@
-# CIC-Intents: Channel-Invariant, Interpretable and Causally Grounded Intent Detection for Italian Multi-Channel Fraud
+# CIC-Intents
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch 2.x](https://img.shields.io/badge/PyTorch-2.x-red.svg)](https://pytorch.org/)
+Channel-Invariant, Interpretable and Causally Grounded Intent Detection
+for Italian Multi-Channel Fraud.
 
-Official code, data splits, and reproducibility artefacts for the paper:
-
-> **CIC-Intents: Channel-Invariant, Interpretable and Causally Grounded Intent Detection for Italian Multi-Channel Fraud**
-> Mariia Bilikhodze
-> University of Pavia, Department of Economics and Management
-> Submitted to *Information Processing & Management* (Elsevier), 2026.
-
----
-
-## TL;DR
-
-Fine-tuned Italian BERT (UmBERTo) reaches **99.75%** in-domain accuracy on phishing detection but collapses to **2.43%** on held-out SMS under leave-one-channel-out validation. The encoder learns *channel* rather than *intent*. **CIC-Intents** fixes this by combining four components:
-
-1. **IFIT** — Italian Fraud Intent Taxonomy (12 intents, multi-label).
-2. **Multi-Label SupCon** — contrastive loss with cross-channel weighting.
-3. **Kernel MMD + PCC** — distribution alignment during training + post-hoc linear centering.
-4. **Gradient-based causal attribution** — PN/PS per token.
-
-The system reaches **mAP 0.723** and **Top-5 recall 0.924**, with balanced email and SMS performance. Ablation shows PCC alone accounts for the -54.7% reduction in Domain Mutual Information (0.739 → 0.335) without damaging the intent signal.
+Code, prompts, data splits and reproduction scripts for the paper
+(M. Bilikhodze, University of Pavia).
 
 ---
 
 ## Repository structure
-
-```
-cic-intents/
-├── data/               # Annotated corpus (950 docs) + intermediate splits
-├── docs/               # Annotation prompt, taxonomy, pipeline walkthrough
-├── models/             # Model checkpoints (not committed; see models/README.md)
-├── notebooks/          # Full end-to-end pipeline notebook
-├── paper/              # LaTeX source, bibliography, PDF
-├── results/            # Metric CSVs and figures
-├── src/                # Reusable Python modules
-├── requirements.txt
+.
+├── data/ # LICENSE, README (data not shipped, see data/README.md)
+├── docs/ # paper-level documentation
+│ ├── annotation_prompt.md # exact Gemini prompt + parser
+│ ├── data_sources.md # provenance of all four channels
+│ ├── pipeline.md # end-to-end description
+│ ├── reproducibility.md # step-by-step checklist
+│ └── taxonomy.md # Italian Fraud Intent Taxonomy (IFIT)
+├── models/ # checkpoints (hosted externally, see models/README.md)
+├── notebooks/ # lightweight demo + reproduction notebooks
+├── paper/ # LaTeX source
+├── results/ # metrics, predictions, CSVs (see results/README.md)
+├── src/ # modular pipeline
+│ ├── attribution.py # PN/PS gradient×input saliency
+│ ├── cleaning.py # preprocessing v7 (HTML, homoglyphs, spaCy lemmas)
+│ ├── features_v4.py # 33 hand-crafted intent features
+│ ├── figures.py # all paper figures
+│ ├── losses.py # MultiLabelSupConLoss + channel_mmd_loss
+│ ├── model.py # CICLMMDv2 (UmBERTo + intent head + projection + MMD)
+│ ├── pcc.py # Post-hoc Channel Centering + domain MI
+│ ├── splits.py # 70/15/15 + LOO-forum + 5-fold CV
+│ ├── train.py # train_cicl + predict_proba + get_cls_embeddings
+│ └── utils.py # seeds, paths, IFIT codes, parsing
 ├── CITATION.cff
-├── LICENSE             # MIT (code)
-└── README.md
-```
+├── LICENSE
+├── README.md
+└── requirements.txt
+
+text
 
 ---
 
-## Quick start
-
-### 1. Install
+## Install
 
 ```bash
-git clone https://github.com/marybilik/cic-intents.git
+git clone https://github.com/marybilik/cic-intents
 cd cic-intents
-python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 python -m spacy download it_core_news_sm
-```
+Requires a GPU with ≥ 15 GB VRAM for training (T4 / P100).
+Post-hoc analyses (bootstrap, causal attribution, figures) run on CPU.
 
-### 2. Reproduce headline metrics (no GPU needed for reading)
+Data
+The four-channel Italian corpus is not shipped in this repository.
+It is assembled from four independently collected sources and, for two of
+them, from a scraped corpus that requires network access. See
+docs/data_sources.md for provenance and licensing.
 
-The final annotated corpus `data/df_cicl.csv` (950 documents, 12 intents, 3 channels) is committed to the repo. All headline metrics in the paper can be recomputed from it.
+The final annotated corpus is exported as a single file df_cicl.csv
+(950 rows, 12-intent multi-hot labels). It is available on request and as
+part of the Kaggle dataset mariabilik/df-cicl.
 
-```python
-import pandas as pd
-df = pd.read_csv('data/df_cicl.csv')
-print(df['channel_id'].value_counts())
-# 0 (email): 421,  1 (sms): 416,  3 (forum): 113
-```
+To rebuild the corpus from scratch:
 
-### 3. Retrain CIC-Intents end-to-end (GPU recommended)
+bash
+export GEMINI_API_KEY="..."          # annotation
+export CIC_BUILD_CORPUS=1            # re-scrape + re-annotate
+python -m src.cleaning               # preprocessing v7
+python -m src.attribution --annotate # Gemini annotation
+The exact annotation prompt is in docs/annotation_prompt.md.
 
-Open `notebooks/cic_intents_full_pipeline.ipynb`. It is self-contained:
+Training & evaluation
+Trained checkpoints are hosted externally — see models/README.md.
+If the checkpoints are present at $CIC_CKPT_DIR (default ./models/),
+training is skipped and evaluation runs directly from them.
 
-- **Part A** (Colab, internet): data acquisition + preprocessing + annotation.
-- **Part B** (Kaggle / local GPU): training + evaluation + figures.
+Otherwise, to train from scratch:
 
-Training takes ~40 minutes on a single NVIDIA T4 for the main model, ~30 minutes for LOO-forum. The λ-MMD sweep is ~3 hours on the same hardware.
+bash
+export CIC_DATA_DIR="./data"         # where df_cicl.csv lives
+export CIC_OUT_DIR="./results"
+python -m src.train --config configs/main.yaml
+python -m src.pcc                    # Post-hoc Channel Centering
+python -m src.attribution            # PN/PS causal attribution
+python -m src.figures                # generate all paper figures
+Environment variables:
 
-### 4. Reproduce individual figures
+Variable	Purpose	Default
+CIC_DATA_DIR	Where df_cicl.csv lives	./data/
+CIC_CKPT_DIR	Where checkpoints live	./models/
+CIC_OUT_DIR	Where outputs are written	./results/
+CIC_BUILD_CORPUS	1 to re-scrape + re-annotate	0
+GEMINI_API_KEY	Gemini key for annotation	—
+Frozen configuration
+All reported numbers use the following configuration. Deviations are
+documented in the paper's Appendix.
 
-```bash
-# All figures from a trained checkpoint:
-python -m src.figures --checkpoint models/cicl_main.pt --outdir results/figures/
+python
+MODEL_NAME        = "Musixmatch/umberto-commoncrawl-cased-v1"
+MAX_LEN           = 160
+BATCH_SIZE        = 32
+LR                = 5e-5
+WEIGHT_DECAY      = 0.01
+EPOCHS            = 10
+TEMPERATURE       = 0.07       # SupCon temperature
+CHANNEL_WEIGHT    = 0.5        # α in Eq. (3)
+LAMBDA_SUPCON     = 0.3
+LAMBDA_MMD        = 0.3        # final; see λ-sweep for the full curve
+POS_WEIGHT_CLIP   = 5.0        # BCE pos_weight clipped to [1, 5]
+RANDOM_STATE      = 42
+Main results
+Metric	Value
+mAP (macro, 9 intents, support ≥ 2)	0.723
+Mean AUC	0.784
+Top-5 recall	0.924
+Macro-F1 (t = 0.5)	0.464
+Email macro-F1	0.452
+SMS macro-F1	0.453
+Domain MI: raw → centered	0.739 → 0.335 (−54.7%)
+k-NN intent |Δ| after centering	0.009
+PN at k = 5, 10, 20	0.183 / 0.286 / 0.356
+Full per-intent and per-channel numbers are in results/paper_metrics.json
+and in the paper.
 
-# Post-hoc channel centering analysis (Table 8, Table 12):
-python -m src.pcc --checkpoint models/cicl_main.pt --data data/df_cicl.csv
+Reproducibility
+See docs/reproducibility.md for the full checklist. Summary:
 
-# Causal attribution (Table 14, Figure 10):
-python -m src.attribution --checkpoint models/cicl_main.pt --data data/df_cicl.csv
-```
+Random seed 42 (numpy, torch, sklearn splits).
 
----
+Frozen hyperparameters (see table above).
 
-## The Italian Fraud Intent Taxonomy (IFIT)
+Splits: main 70/15/15 (N_test = 143), LOO-forum (n = 113), 5-fold CV on forum.
 
-12 intents, multi-label, in two families:
+Bootstrap CIs: 1000 resamples, seed 42.
 
-**Explicit requests (5):** `credential_request`, `payment_request`, `data_request`, `click_request`, `call_request`.
+Paired tests: paired bootstrap with p = 2 × min(P(Δ>0), P(Δ<0)), consistent
+with the reported CIs.
 
-**Implicit manipulations (7):** `urgency`, `authority`, `fear`, `greed`, `impersonation`, `social_proof`, `reciprocity`.
+Known limitations
+Documented in the paper's Section 6; repeated here for convenience.
 
-Mean intents per fraud document: **2.97**. Full definitions in `docs/taxonomy.md`.
+Use/mention confound. Email and SMS carry use labels (the message
+itself is fraudulent); forum carries mention labels (the post discusses
+fraud). The model is trained jointly on all four roles. Leave-forum-out
+partially controls for this, but the confound is not fully removed.
 
----
+LLM-generated email corpus. E-PhishLLM is LLM-generated; the channel
+shortcut may be partly a source artefact.
 
-## Datasets
+LLM annotation. 950 documents annotated zero-shot with Gemini,
+validated on a 10% sample. No human inter-annotator agreement.
 
-| Channel | Total | Fraud | Non-fraud | Role |
-|---|---|---|---|---|
-| Email (E-PhishLLM) | 2,701 | 1,131 | 1,570 | use / legit |
-| SMS (Smishing-IMC25) | 536 | 536 | 0 | use |
-| Telegram (MuLTa) | 827 | 0 | 827 | mention |
-| Forum (scraped) | 312 | 0 | 312 | mention |
-| **Total** | **4,376** | 1,667 | 2,709 | |
+Residual cross-channel weakness. LOO-SMS accuracy is 0.243.
+PCC helps but does not solve transfer.
 
-Annotated subset used for intent training: **950 documents** (email fraud + email legit + SMS fraud + forum), interleaved across all three channels.
+Small-n forum. Three independent estimates reported.
 
-Raw corpora are pulled from:
-- **E-PhishLLM** — `pajola/e-phishGen` on HuggingFace.
-- **Smishing-IMC25** — `reportsmishing/Smishing-Dataset-IMC25` on GitHub.
-- **MuLTa-Telegram** — `dhfbk/MuLTa-Telegram` on GitHub.
-- **Forum** — scraped from Digital-Forum and MilanWorld (script in `src/`).
+Single-seed main runs. Multi-seed verification on a sub-experiment
+only (σ ≈ 0.01 macro-F1); forum CV variance σ ≈ 0.06.
 
-See `data/README.md` for the full provenance and licensing.
-
----
-
-## Reproducibility checklist
-
-| Item | Value |
-|---|---|
-| Random seed | 42 (all experiments) |
-| Hardware | NVIDIA T4 (Kaggle) for training; CPU for post-hoc |
-| Optimizer | AdamW, lr = 5e-5, weight decay 0.01 |
-| Batch size | 32 |
-| Max sequence length | 160 |
-| Epochs | 10 |
-| Encoder | `Musixmatch/umberto-commoncrawl-cased-v1` |
-| τ (SupCon temperature) | 0.07 |
-| α (channel weight) | 0.5 |
-| λ_SupCon | 0.3 |
-| λ_MMD | 0.3 (elbow of Pareto frontier) |
-| pos_weight clipping | 5 |
-| Bootstrap resamples | 1000 |
-| Attribution top-k | {5, 10, 20} |
-
-Full details in `paper/main.pdf`, Appendix A.
-
----
-
-## License
-
-- **Code** (`src/`, `notebooks/`): MIT — see `LICENSE`.
-- **Paper** (`paper/`): CC BY 4.0 — see `paper/LICENSE`.
-- **Datasets** (`data/`): combination of upstream licenses. See `data/README.md` for attribution requirements of E-PhishLLM, Smishing-IMC25, and MuLTa-Telegram.
-
----
-
-## Citation
-
-```bibtex
+Citation
+bibtex
 @article{bilikhodze2026cicintents,
-  title   = {{CIC-Intents}: Channel-Invariant, Interpretable and Causally
-             Grounded Intent Detection for Italian Multi-Channel Fraud},
-  author  = {Bilikhodze, Mariia},
-  journal = {Information Processing \& Management},
-  year    = {2026},
-  note    = {Under review}
+  title  = {CIC-Intents: Channel-Invariant, Interpretable and Causally
+            Grounded Intent Detection for Italian Multi-Channel Fraud},
+  author = {Bilikhodze, Mariia},
+  year   = {2026},
+  note   = {University of Pavia, Department of Economics and Management}
 }
-```
-
-See `CITATION.cff` for a machine-readable version.
-
----
-
-## Contact
-
-Issues and questions: please open a GitHub issue or email `mariia.bilikhodze01@universitadipavia.it`.
-
-## Acknowledgements
-
-UmBERTo model: Musixmatch Research. spaCy Italian pipeline: Explosion AI. Compute: Kaggle T4 GPU program.
+License
+MIT (see LICENSE).
