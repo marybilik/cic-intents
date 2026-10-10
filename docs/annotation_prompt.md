@@ -1,8 +1,10 @@
 # Annotation prompt
 
-The corpus was annotated zero-shot with **Google Gemini** (`gemini-flash-latest`,
-auto-discovered at runtime from a priority list of Gemini Flash models).
-The same prompt is used in `src/attribution.py --annotate`.
+The corpus was annotated zero-shot with **Google Gemini**
+(`gemini-flash-latest`, auto-discovered at runtime from a priority list
+of Gemini Flash models). The same prompt is used in
+[`../notebooks/01-corpus-construction.ipynb`](../notebooks/01-corpus-construction.ipynb),
+CELL 8.
 
 ## Model discovery
 
@@ -29,17 +31,17 @@ Analizza il testo e identifica TUTTI gli intenti fraudolenti.
 
 CODICI:
 - credential_request: Richiesta login/password/PIN/SPID
-- payment_request: Richiesta pagamento/bonifico/dati carta/IBAN
-- data_request: Richiesta codice fiscale/documento/indirizzo
-- click_request: Richiesta click su link/allegato/QR code
-- call_request: Richiesta chiamare un numero/contattare falso supporto
-- urgency: Pressione temporale, scadenza
-- authority: Riferimento a banca/Poste/INPS/polizia/ministero
-- fear: Minaccia: blocco/multa/sanzione/azione legale
-- greed: Promessa premio/bonus/rimborso/regalo
-- impersonation: Fingere di essere conoscente/collega/parente
-- social_proof: Riferimento ad altri utenti
-- reciprocity: Senso di debito
+- payment_request:    Richiesta pagamento/bonifico/dati carta/IBAN
+- data_request:       Richiesta codice fiscale/documento/indirizzo
+- click_request:      Richiesta click su link/allegato/QR code
+- call_request:       Richiesta chiamare un numero/contattare falso supporto
+- urgency:            Pressione temporale, scadenza
+- authority:          Riferimento a banca/Poste/INPS/polizia/ministero
+- fear:               Minaccia: blocco/multa/sanzione/azione legale
+- greed:              Promessa premio/bonus/rimborso/regalo
+- impersonation:      Fingere di essere conoscente/collega/parente
+- social_proof:       Riferimento ad altri utenti
+- reciprocity:        Senso di debito
 
 REGOLE:
 1. Multi-label (uno o più codici)
@@ -72,25 +74,30 @@ def parse_answer(ans, intent_codes):
 
 ## Rate limiting
 
-- Sleep 4.5 s between requests (~13 RPM, below the 15 RPM free-tier limit)
-- Exponential backoff on HTTP 429: 5 s, 10 s, 20 s
-- Checkpoint written every 25 documents
-- Failed rows are reset and retried on the next run
+- Sleep **4.5 s** between requests (~13 RPM, below the 15 RPM
+  free-tier limit).
+- Exponential backoff on HTTP 429: 5 s, 10 s, 20 s.
+- Checkpoint written every **25 documents** to
+  `annotation_checkpoint.csv`.
+- Failed rows are reset and retried on the next run.
 
 ## Validation
 
 A random 10% sample of the annotated corpus was manually checked for
 label correctness. No inter-annotator agreement study was performed;
-this is acknowledged in the paper (Section 6).
+this is acknowledged in the paper (Section 6, *Limitations*).
 
 ## Reproducibility
 
-To re-annotate from scratch:
+To re-annotate from scratch, run
+[`../notebooks/01-corpus-construction.ipynb`](../notebooks/01-corpus-construction.ipynb)
+end-to-end. The relevant environment variable is:
 
 ```bash
 export GEMINI_API_KEY="..."
-python -m src.attribution --annotate --out ./data/annotation_full.csv
 ```
 
 Output format: one row per document with columns
 `text_clean`, `subset`, `source`, `intent_labels` (list), `raw_answer`.
+The final annotated corpus is written to `df_cicl.csv` with a
+`multihot` column (stringified `np.ndarray` of 12 floats).
