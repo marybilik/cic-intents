@@ -1,0 +1,407 @@
+%% ============================================================
+%% CIC-Intents — bibliography (final, compile-ready)
+%% ============================================================
+
+%% ---------- Datasets ----------
+
+@inproceedings{pajola2025ephishgen,
+  title     = {{E-PhishGen}: Unlocking Novel Research in Phishing
+               Email Detection},
+  author    = {Pajola, Luca and Pogliani, Marco and Balzarotti, Davide},
+  booktitle = {Proceedings of the ACM Workshop on Artificial Intelligence
+               and Security (AISec '25)},
+  pages     = {1--12},
+  year      = {2025},
+  publisher = {ACM},
+  note      = {arXiv:2509.01791}
+}
+
+@misc{agarwal2025smishing,
+  title        = {{Smishing-IMC25}: An Italian {SMS} Phishing Dataset},
+  author       = {Agarwal, Sharad and others},
+  year         = {2025},
+  howpublished = {GitHub repository},
+  note         = {Paper at ACM Internet Measurement Conference (IMC) 2025.
+                  \url{https://github.com/reportsmishing/Smishing-Dataset-IMC25}}
+}
+
+@misc{leonardelli2025multa,
+  title        = {{MuLTa-Telegram}: A Multi-Label Hate Speech Dataset
+                  for {Italian} and {Polish}},
+  author       = {Leonardelli, Elisa and others},
+  year         = {2025},
+  howpublished = {GitHub repository},
+  note         = {\url{https://github.com/dhfbk/MuLTa-Telegram}}
+}
+
+%% ---------- Intent taxonomies ----------
+
+@inproceedings{popovic2026dideco,
+  title     = {{DIDECO}: An Annotated Dataset for Intent Detection in
+               Digital Communications},
+  author    = {Popovic, Senaid and Riquet, Damien and Meyer, Maxime
+               and Lauer, Fabien and Parmentier, Yannick},
+  booktitle = {Proceedings of the Fifteenth Language Resources and
+               Evaluation Conference (LREC 2026)},
+  year      = {2026},
+  address   = {Palma de Mallorca, Spain},
+  publisher = {European Language Resources Association (ELRA)},
+  note      = {HAL Id: hal-05616045. Grounded in Speech Act Theory and
+               persuasion psychology; 20 intent categories across
+               explicit and implicit intents},
+  url       = {https://hal.science/hal-05616045v1}
+}
+
+@inproceedings{ferreira2015principles,
+  title     = {Principles of Persuasion in Social Engineering and Their
+               Use in Phishing},
+  author    = {Ferreira, Ana and Teles, Soraia},
+  booktitle = {International Conference on Human Aspects of Information
+               Security, Privacy, and Trust (HAS)},
+  pages     = {36--47},
+  year      = {2015},
+  publisher = {Springer},
+  doi       = {10.1007/978-3-319-20376-8_4}
+}
+
+%% ---------- Encoders and language models ----------
+
+@inproceedings{devlin2019bert,
+  title     = {{BERT}: Pre-training of Deep Bidirectional Transformers
+               for Language Understanding},
+  author    = {Devlin, Jacob and Chang, Ming-Wei and Lee, Kenton
+               and Toutanova, Kristina},
+  booktitle = {Proceedings of NAACL-HLT},
+  pages     = {4171--4186},
+  year      = {2019},
+  doi       = {10.18653/v1/N19-1423}
+}
+
+@article{liu2019roberta,
+  title   = {{RoBERTa}: A Robustly Optimized {BERT} Pretraining Approach},
+  author  = {Liu, Yinhan and Ott, Myle and Goyal, Naman and Du, Jingfei
+             and Joshi, Mandar and Chen, Danqi and Levy, Omer and
+             Lewis, Mike and Zettlemoyer, Luke and Stoyanov, Veselin},
+  journal = {arXiv preprint arXiv:1907.11692},
+  year    = {2019}
+}
+
+@misc{umberto2020,
+  title        = {{UmBERTo}: An Italian Language Model Trained with
+                  Whole Word Masking},
+  author       = {{Musixmatch Research}},
+  year         = {2020},
+  howpublished = {HuggingFace model card},
+  note         = {\url{https://huggingface.co/Musixmatch/umberto-commoncrawl-cased-v1}}
+}
+
+@inproceedings{suarez2019oscar,
+  title     = {Asynchronous Pipeline for Processing Huge Corpora on Medium
+               to Low Resource Infrastructures},
+  author    = {Su{\'a}rez, Pedro Javier Ortiz and Sagot, Beno{\^i}t
+               and Romary, Laurent},
+  booktitle = {Proceedings of the 7th Workshop on the Challenges in the
+               Management of Large Corpora (CMLC-7)},
+  pages     = {9--15},
+  year      = {2019},
+  doi       = {10.5281/zenodo.3733070}
+}
+
+%% ---------- Contrastive learning ----------
+
+@inproceedings{khosla2020supcon,
+  title     = {Supervised Contrastive Learning},
+  author    = {Khosla, Prannay and Teterwak, Piotr and Wang, Chen
+               and Sarna, Aaron and Tian, Yonglong and Isola, Phillip
+               and Maschinot, Aaron and Liu, Ce and Krishnan, Dilip},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {33},
+  pages     = {18661--18673},
+  year      = {2020}
+}
+
+@inproceedings{chen2020simclr,
+  title     = {A Simple Framework for Contrastive Learning of Visual
+               Representations},
+  author    = {Chen, Ting and Kornblith, Simon and Norouzi, Mohammad
+               and Hinton, Geoffrey},
+  booktitle = {Proceedings of the 37th International Conference on
+               Machine Learning (ICML)},
+  pages     = {1597--1607},
+  year      = {2020}
+}
+
+@article{audibert2025multilabel,
+  title   = {Multi-Label Contrastive Learning: A Comprehensive Study},
+  author  = {Audibert, Alexandre and Gauffre, Aur{\'e}lien
+             and Amini, Massih-Reza},
+  journal = {arXiv preprint arXiv:2412.00101},
+  year    = {2025},
+  note    = {Introduces a regularized contrastive loss that mitigates
+             an undesired gradient behaviour in positive pairs; reports
+             state-of-the-art Macro-F1 on multi-label NLP benchmarks
+             including AAPD, RCV1, and BGC}
+}
+
+@article{lspcl2025,
+  title   = {Label-Specific Supervised Prototype Contrastive Learning for
+             Multi-Label Text Classification},
+  author  = {Zhang, Y. and others},
+  journal = {Knowledge-Based Systems},
+  volume  = {309},
+  pages   = {112--125},
+  year    = {2025},
+  doi     = {10.1016/j.knosys.2024.112125}
+}
+
+@article{big2025,
+  title   = {{BiG}: A Bidirectional Group-Wise Contrastive Learning Method
+             for Multi-Label Text Classification},
+  author  = {Li, X. and others},
+  journal = {Expert Systems with Applications},
+  year    = {2025},
+  doi     = {10.1016/j.eswa.2025.126994}
+}
+
+@inproceedings{abalone2024,
+  title     = {Exploring Contrastive Learning for Long-Tailed Multi-Label
+               Text Classification},
+  author    = {D{\'e}scles, Jean and others},
+  booktitle = {Machine Learning and Knowledge Discovery in Databases
+               (ECML PKDD)},
+  year      = {2024},
+  doi       = {10.1007/978-3-031-70359-3_20}
+}
+
+%% ---------- Domain adaptation ----------
+
+@article{ganin2016domain,
+  title   = {Domain-Adversarial Training of Neural Networks},
+  author  = {Ganin, Yaroslav and Ustinova, Evgeniya and Ajakan, Hana
+             and Germain, Pascal and Larochelle, Hugo and
+             Laviolette, Fran{\c{c}}ois and Marchand, Mario
+             and Lempitsky, Victor},
+  journal = {Journal of Machine Learning Research},
+  volume  = {17},
+  number  = {59},
+  pages   = {1--35},
+  year    = {2016}
+}
+
+@article{gretton2012mmd,
+  title   = {A Kernel Two-Sample Test},
+  author  = {Gretton, Arthur and Borgwardt, Karsten M. and Rasch,
+             Malte J. and Sch{\"o}lkopf, Bernhard and Smola, Alexander},
+  journal = {Journal of Machine Learning Research},
+  volume  = {13},
+  pages   = {723--773},
+  year    = {2012}
+}
+
+@inproceedings{long2015dan,
+  title     = {Learning Transferable Features with Deep Adaptation Networks},
+  author    = {Long, Mingsheng and Cao, Yue and Wang, Jianmin
+               and Jordan, Michael I.},
+  booktitle = {Proceedings of the 32nd International Conference on
+               Machine Learning (ICML)},
+  pages     = {97--105},
+  year      = {2015}
+}
+
+@inproceedings{bendavid2006,
+  title     = {Analysis of Representations for Domain Adaptation},
+  author    = {Ben-David, Shai and Blitzer, John and Crammer, Koby
+               and Pereira, Fernando},
+  booktitle = {Advances in Neural Information Processing Systems (NIPS)},
+  pages     = {137--144},
+  year      = {2006}
+}
+
+@article{mmd_degrade2026,
+  title   = {Efficient Cross-Domain Sentiment Analysis via Knowledge
+             Distillation and Maximum Mean Discrepancy Alignment},
+  author  = {Wang, J. and others},
+  journal = {IEEE Transactions on Affective Computing},
+  year    = {2026},
+  note    = {Ablation shows MMD alone degrades accuracy by 0.55 pp}
+}
+
+%% ---------- Shortcut learning ----------
+
+@article{geirhos2020shortcut,
+  title   = {Shortcut Learning in Deep Neural Networks},
+  author  = {Geirhos, Robert and Jacobsen, J{\"o}rn-Henrik and
+             Michaelis, Claudio and Zemel, Richard and Brendel, Wieland
+             and Bethge, Matthias and Wichmann, Felix A.},
+  journal = {Nature Machine Intelligence},
+  volume  = {2},
+  number  = {11},
+  pages   = {665--673},
+  year    = {2020},
+  doi     = {10.1038/s42256-020-00257-z}
+}
+
+@inproceedings{mccoy2019right,
+  title     = {Right for the Wrong Reasons: Diagnosing Syntactic
+               Heuristics in Natural Language Inference},
+  author    = {McCoy, R. Thomas and Pavlick, Ellie and Linzen, Tal},
+  booktitle = {Proceedings of the 57th Annual Meeting of the Association
+               for Computational Linguistics (ACL)},
+  pages     = {3428--3448},
+  year      = {2019},
+  doi       = {10.18653/v1/P19-1334}
+}
+
+@article{du2022shortcut,
+  title   = {Shortcut Learning of Large Language Models in Natural
+             Language Understanding},
+  author  = {Du, Mengnan and He, Fengxiang and Zou, Na and Tao, Dacheng
+             and Hu, Xia},
+  journal = {arXiv preprint arXiv:2208.11857},
+  year    = {2022}
+}
+
+@inproceedings{warstadt2020blimp,
+  title     = {{BLiMP}: The Benchmark of Linguistic Minimal Pairs for
+               English},
+  author    = {Warstadt, Alex and Parrish, Alicia and Liu, Haokun
+               and Mohananey, Anhad and Peng, Wei and Wang, Sheng-Fu
+               and Bowman, Samuel R.},
+  booktitle = {Transactions of the Association for Computational
+               Linguistics (TACL)},
+  volume    = {8},
+  pages     = {377--392},
+  year      = {2020},
+  doi       = {10.1162/tacl_a_00321}
+}
+
+%% ---------- Causal inference ----------
+
+@book{pearl2009causality,
+  title     = {Causality: Models, Reasoning, and Inference},
+  author    = {Pearl, Judea},
+  edition   = {2nd},
+  publisher = {Cambridge University Press},
+  year      = {2009},
+  isbn      = {9780521895606}
+}
+
+@article{feder2022causal,
+  title   = {Causal Inference in Natural Language Processing:
+             Estimation, Prediction, Interpretation and Beyond},
+  author  = {Feder, Amir and Keith, Katherine A. and Manzoor, Emaad
+             and Pryzant, Reid and Sridhar, Dhanya and
+             Wood-Doughty, Zach and Eisenstein, Jacob and
+             Grimmer, Justin and Reichart, Roi and Roberts, Margaret E.
+             and others},
+  journal = {Transactions of the Association for Computational
+             Linguistics (TACL)},
+  volume  = {10},
+  pages   = {1138--1158},
+  year    = {2022},
+  doi     = {10.1162/tacl_a_00511}
+}
+
+@inproceedings{kaushik2020learning,
+  title     = {Learning the Difference that Makes a Difference with
+               Counterfactually-Augmented Data},
+  author    = {Kaushik, Divyansh and Hovy, Eduard and Lipton, Zachary C.},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  pages     = {1--20},
+  year      = {2020}
+}
+
+@inproceedings{cheng2025cpns,
+  title     = {Causal Probability of Necessity and Sufficiency for
+               Natural Language Processing},
+  author    = {Cheng, Lu and others},
+  booktitle = {Findings of the Association for Computational Linguistics:
+               EMNLP 2025},
+  pages     = {1--15},
+  year      = {2025},
+  doi       = {10.18653/v1/2025.findings-emnlp.1290}
+}
+
+@inproceedings{joshi2022spurious,
+  title     = {Are All Spurious Features in Natural Language Alike?
+               An Analysis through a Causal Lens},
+  author    = {Joshi, Nitish and He, He},
+  booktitle = {Proceedings of the 2022 Conference on Empirical Methods
+               in Natural Language Processing (EMNLP)},
+  pages     = {9805--9823},
+  year      = {2022},
+  address   = {Abu Dhabi, United Arab Emirates},
+  publisher = {Association for Computational Linguistics},
+  doi       = {10.18653/v1/2022.emnlp-main.666},
+  note      = {arXiv:2210.14011}
+}
+
+@inproceedings{serrano2019attention,
+  title     = {Is Attention Interpretable?},
+  author    = {Serrano, Sofia and Smith, Noah A.},
+  booktitle = {Proceedings of the 57th Annual Meeting of the Association
+               for Computational Linguistics (ACL)},
+  pages     = {2931--2951},
+  year      = {2019},
+  doi       = {10.18653/v1/P19-1282}
+}
+
+%% ---------- Phishing and fraud detection ----------
+
+@article{sahingoz2019machine,
+  title   = {Machine Learning Based Phishing Detection from {URLs}},
+  author  = {Sahingoz, Ozgur Koray and Buber, Ebubekir and Demir, Onder
+             and Diri, Banu},
+  journal = {Expert Systems with Applications},
+  volume  = {117},
+  pages   = {345--357},
+  year    = {2019},
+  doi     = {10.1016/j.eswa.2018.09.029}
+}
+
+@article{zieni2023survey,
+  title   = {Phishing or Not Phishing? A Survey on the Detection of
+             Phishing Websites},
+  author  = {Zieni, Rasha and Massari, Luisa and Calzarossa, Maria Carla},
+  journal = {IEEE Access},
+  volume  = {11},
+  pages   = {18499--18519},
+  year    = {2023},
+  doi     = {10.1109/ACCESS.2023.3247135}
+}
+
+
+
+
+%% ---------- Use/mention distinction ----------
+
+@inproceedings{gligoric2024use,
+  title     = {{NLP} Systems That Can't Tell Use from Mention Censor
+               Counterspeech, but Teaching the Distinction Helps},
+  author    = {Gligori{\'c}, Kristina and Cheng, Myra and Zheng, Lucia
+               and Durmus, Esin and Jurafsky, Dan},
+  booktitle = {Proceedings of the 2024 Conference of the North American
+               Chapter of the Association for Computational Linguistics
+               (NAACL)},
+  year      = {2024},
+  note      = {Shows that language models fail to distinguish use from
+               mention, propagating errors to misinformation and hate
+               speech detection}
+}
+
+@inproceedings{wilson2010distinguishing,
+  title     = {Distinguishing Use and Mention in Natural Language},
+  author    = {Wilson, Shomir},
+  booktitle = {Proceedings of the NAACL HLT 2010 Student Research Workshop},
+  pages     = {29--33},
+  year      = {2010}
+}
+
+%% ---------- Tools ----------
+
+@misc{spacy,
+  title        = {{spaCy}: Industrial-Strength Natural Language Processing},
+  author       = {{Explosion AI}},
+  year         = {2024},
+  howpublished = {\url{https://spacy.io}}
+}
