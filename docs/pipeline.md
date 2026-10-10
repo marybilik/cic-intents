@@ -1,19 +1,21 @@
 # End-to-End Pipeline
 
 Full walkthrough from raw sources to paper figures. Two parts, matching
-the notebook structure.
+the two notebooks.
 
 ## Part A — Data acquisition & preprocessing (Colab, internet required)
+
+Notebook: [`../notebooks/01-corpus-construction.ipynb`](../notebooks/01-corpus-construction.ipynb).
 
 ### A1. Forum scraping
 
 ```python
-from src import cleaning  # only for later
 import cloudscraper, time, random
-# Full scraper in notebooks/cic_intents_full_pipeline.ipynb, Cell A1.
+from bs4 import BeautifulSoup
+# Full scraper in notebook 01, CELL 4.
 ```
 
-Output: `data/forum_corpus_max.csv` (312 posts after length filter).
+Output: `forum_corpus_max.csv` — 312 posts after length filter.
 
 ### A2. Load HuggingFace corpora
 
@@ -62,7 +64,8 @@ Cyrillic homoglyph handling → zero-width + whitespace + lowercase.
 3. Cross-source dedup with priority email > SMS > Telegram.
 4. Exclude forum texts that appear in the labeled corpus.
 
-Result: 4,064 labeled + 312 forum = 4,376 documents (95.6% retention).
+Result: 4,064 labeled + 312 forum = **4,376 documents** (95.6%
+retention).
 
 ### A5. Lemmatization
 
@@ -81,15 +84,20 @@ def lemmatize_batch(texts, batch_size=256):
 
 ### A6. Psycholinguistic markers
 
-Four markers (urgency, authority, fear, greed), word-list based.
-See notebook Cell A4, `MARKERS` dict. Used in the soft-gate baseline.
+Four markers (`urgency`, `authority`, `fear`, `greed`), word-list based.
+See `MARKERS` in notebook 01, CELL 7. Used in the soft-gate baseline.
 
 ### A7. IFIT annotation (Gemini)
 
-See `docs/annotation_prompt.md`. Output: `data/df_cicl.csv` (950 docs,
-`multihot` column as a stringified numpy array).
+See [`annotation_prompt.md`](annotation_prompt.md). Output:
+`df_cicl.csv` — 950 docs, `multihot` column as a stringified NumPy
+array of length 12.
+
+---
 
 ## Part B — Training & evaluation (Kaggle / local GPU)
+
+Notebook: [`../notebooks/02-training-evaluation.ipynb`](../notebooks/02-training-evaluation.ipynb).
 
 ### B1. Load annotated corpus
 
@@ -99,7 +107,7 @@ df = pd.read_csv('data/df_cicl.csv')
 df['multihot'] = df['multihot'].apply(
     lambda s: np.array(eval(s), dtype=np.float32))
 df['channel_id'] = df['channel_id'].astype(int)
-df['n_intents'] = df['multihot'].apply(lambda v: int(v.sum()))
+df['n_intents']  = df['multihot'].apply(lambda v: int(v.sum()))
 ```
 
 ### B2. Build splits
@@ -140,7 +148,8 @@ torch.save(model.state_dict(), 'models/cicl_main.pt')
 
 ```python
 from src.utils import predict_proba
-from sklearn.metrics import average_precision_score, precision_recall_fscore_support
+from sklearn.metrics import (average_precision_score,
+                             precision_recall_fscore_support)
 
 probs, ys, chs = predict_proba(model, splits['main']['test'],
                                 tokenizer, device)
@@ -153,7 +162,7 @@ _, _, f1, _ = precision_recall_fscore_support(
 supports = ys.sum(axis=0).astype(int)
 aps = [average_precision_score(ys[:, i], probs[:, i])
        for i in range(12) if supports[i] >= 2]
-mAP = np.mean(aps)
+mAP = float(np.mean(aps))
 
 # Top-5 recall
 hits, total = 0, 0
@@ -166,7 +175,7 @@ for row in range(len(probs)):
 top5_recall = hits / total
 
 print(f"mAP={mAP:.4f} | Top-5={top5_recall:.4f} | F1={f1:.4f}")
-# Expected: mAP=0.7236 | Top-5=0.9240 | F1=0.4640
+# Expected: mAP=0.7210 | Top-5=0.9310 | F1=0.4654
 ```
 
 ### B5. Post-hoc Channel Centering (PCC)
@@ -176,8 +185,17 @@ from src.pcc import evaluate_pcc
 results = evaluate_pcc(model, splits['main']['test'], tokenizer, device)
 print(f"MI: {results['mi_raw']:.3f} → {results['mi_centered']:.3f} "
       f"({results['reduction']*100:.1f}%)")
-# Expected: MI: 0.739 → 0.335 (-54.7%)
+# Expected (train-means → test protocol):
+#   MI: 0.676 → 0.116 (−82.9%)
 ```
+
+> **Note on the two PCC protocols.**
+> The headline number uses per-channel means estimated on the training
+> split and applied to the test split (train-means → test). The ablation
+> study (Table 8 in the paper) uses a different protocol in which
+> per-channel means are computed on the test batch itself (test-means),
+> giving 0.676 → 0.442 for the full model and 0.788 → 0.380 for the
+> BCE-only model. Both protocols are documented in the paper.
 
 ### B6. Causal attribution (PN/PS)
 
@@ -187,6 +205,8 @@ python -m src.attribution --checkpoint models/cicl_main.pt \
                           --out results/pnps.csv
 ```
 
+Expected: PN = 0.207 / 0.294 / 0.320 at k = 5, 10, 20.
+
 ### B7. Figures
 
 ```bash
@@ -194,6 +214,8 @@ python -m src.figures --checkpoint models/cicl_main.pt \
                       --data data/df_cicl.csv \
                       --outdir results/figures/
 ```
+
+---
 
 ## Reproducibility checklist
 
@@ -205,9 +227,9 @@ python -m src.figures --checkpoint models/cicl_main.pt \
 | Batch | 32 |
 | Max seq len | 160 |
 | Epochs | 10 |
-| τ | 0.07 |
-| α | 0.5 |
+| τ (SupCon temperature) | 0.07 |
+| α (channel weight) | **0.5** |
 | λ_SupCon | 0.3 |
 | λ_MMD | 0.3 |
 | pos_weight clip | 5 |
-| Bootstrap | 1000 |
+| Bootstrap | 1000 resamples |
