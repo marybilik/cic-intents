@@ -14,13 +14,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
-from sklearn.manifold import TSNE as _TSNE  # noqa
 from transformers import AutoTokenizer
 import torch
 
 from .model import CICLMMDv2
-from .utils import predict_proba, get_cls_embeddings, domain_mi_cv
-from .pcc import apply_pcc
+from .utils import predict_proba, get_cls_embeddings, parse_multihot
 from .splits import make_splits
 
 INTENT_CODES = [
@@ -66,8 +64,8 @@ def fig_training_curves(history, outpath):
 
 
 def fig_tsne(embs, channels, labels, outpath):
-    tsne = _TSNE(n_components=2, perplexity=25, random_state=42,
-                 init='pca', learning_rate='auto')
+    tsne = TSNE(n_components=2, perplexity=25, random_state=42,
+                init='pca', learning_rate='auto')
     coords = tsne.fit_transform(embs)
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 7))
@@ -170,8 +168,15 @@ def fig_pn_vs_k(pnps_df, outpath):
 
 def make_all_figures(checkpoint, data_path, outdir,
                      model_name='Musixmatch/umberto-commoncrawl-cased-v1',
-                     n_intents=12):
-    """Generate paper figures 2, 5, 7, 9, 10 from a trained checkpoint."""
+                     n_intents=12,
+                     pnps_path=None):
+    """Generate paper figures from a trained checkpoint.
+
+    Figures produced:
+      fig2_tsne.png          -- t-SNE of CLS embeddings
+      fig5_per_intent_ci.png -- per-intent F1 with bootstrap CIs
+      fig10_pn_vs_k.png      -- PN/PS vs k (requires pnps_path)
+    """
     os.makedirs(outdir, exist_ok=True)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -182,8 +187,7 @@ def make_all_figures(checkpoint, data_path, outdir,
 
     df = pd.read_csv(data_path)
     df['multihot'] = df['multihot'].apply(
-        lambda s: np.array(eval(s), dtype=np.float32)
-        if isinstance(s, str) else np.asarray(s, dtype=np.float32))
+        lambda s: parse_multihot(s, n_intents))
     df['channel_id'] = df['channel_id'].astype(int)
     df['n_intents']  = df['multihot'].apply(lambda v: int(v.sum()))
 
@@ -196,6 +200,10 @@ def make_all_figures(checkpoint, data_path, outdir,
     fig_tsne(embs, chs, ys, os.path.join(outdir, 'fig2_tsne.png'))
     fig_per_intent_ci(ys, probs, os.path.join(outdir, 'fig5_per_intent_ci.png'))
 
+    if pnps_path is not None and os.path.exists(pnps_path):
+        pnps = pd.read_csv(pnps_path)
+        fig_pn_vs_k(pnps, os.path.join(outdir, 'fig10_pn_vs_k.png'))
+
     print(f"Figures saved to {outdir}")
 
 
@@ -204,8 +212,11 @@ def _main():
     parser.add_argument('--checkpoint', required=True)
     parser.add_argument('--data', default='data/df_cicl.csv')
     parser.add_argument('--outdir', default='results/figures/')
+    parser.add_argument('--pnps', default=None,
+                        help='optional path to causal_attribution.csv')
     args = parser.parse_args()
-    make_all_figures(args.checkpoint, args.data, args.outdir)
+    make_all_figures(args.checkpoint, args.data, args.outdir,
+                     pnps_path=args.pnps)
 
 
 if __name__ == '__main__':
