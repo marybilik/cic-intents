@@ -1,10 +1,13 @@
 # The Italian Fraud Intent Taxonomy (IFIT)
 
-12 intents, multi-label, in two families. Adapted from DIDECO
+12 intents, multi-label, organised in two families. Adapted from DIDECO
 (Popovic et al., 2026) for Italian and narrowed to 12 categories to
-reflect the observation that most Italian fraud messages target 2–3
-intents simultaneously (mean **2.97** intents per positive document in
-our annotated corpus).
+reflect the observation that most Italian fraud messages target 2-3
+intents simultaneously (mean **2.97** intents per **positive** document
+in our annotated corpus).
+
+The exact annotation prompt and parser are in
+[`annotation_prompt.md`](annotation_prompt.md).
 
 ## Explicit requests (5)
 
@@ -25,29 +28,34 @@ our annotated corpus).
 | `fear` | Threatens negative consequences. | "account bloccato", "sospensione", "azione legale", "perdita di fondi" |
 | `greed` | Promises a reward, prize, refund, unexpected gain. | "bonus", "rimborso", "premio", "vincita", "investimento" |
 | `impersonation` | Pretends to be a known entity or person. | references to specific banks, services, or individuals with false authority |
-| `social_proof` | Claims that others have already complied or benefited. | "migliaia di utenti", "altri clienti hanno già", "come molti di voi" |
+| `social_proof` | Claims that others have already complied or benefited. | "migliaia di utenti", "altri clienti hanno gia", "come molti di voi" |
 | `reciprocity` | Offers something small in exchange for compliance. | "in cambio di", "se compili riceverai" |
 
 ## Contrast with DIDECO
 
 DIDECO defines 20 intent categories, in English, on LLM-generated
-spear-phishing emails. IFIT is deliberately narrower because:
+spear-phishing emails. IFIT is deliberately narrower for three reasons:
 
 1. **Italian corpus size.** Our annotated corpus is 950 documents
-   (versus DIDECO's larger LLM-generated pool). 12 intents keeps
-   per-intent support above 5 for 9 of 12 categories.
+   (versus DIDECO's larger LLM-generated pool). Restricting to 12 intents
+   keeps per-intent support above 5 for **10 of 12 categories**
+   (the two exceptions are `social_proof` and `reciprocity`, each with
+   support = 3).
 2. **Real SMS and forum.** IFIT is trained on real (non-LLM) SMS and
    forum text in addition to email. Real channels have less lexical
    variety than LLM-generated messages and need fewer categories.
-3. **Use/mention distinction.** IFIT adds an explicit use/mention
-   annotation layer. DIDECO does not. This distinction matters because
-   forum posts about phishing are stylistically close to phishing
-   emails and account for a large fraction of false positives in naive
-   classifiers.
+3. **Use / mention distinction.** IFIT adds an explicit use / mention
+   annotation layer that DIDECO does not address. This distinction
+   matters because forum posts about phishing are stylistically close to
+   phishing emails and account for a large fraction of false positives
+   in naive classifiers.
 
 ## Annotation statistics (950 documents)
 
-Per-intent support over the annotated corpus:
+Per-intent support over the **full annotated corpus** (950 documents),
+not over the test split. The macro-averaged AP reported in the paper is
+computed over the nine intents with support >= 2 in the **test split**
+(N_test = 143); test-split support differs from the numbers below.
 
 | Intent | Support |
 |---|---:|
@@ -63,13 +71,33 @@ Per-intent support over the annotated corpus:
 | `call_request` | 24 |
 | `social_proof` | 3 |
 | `reciprocity` | 3 |
-| **Mean intents/doc (positive only)** | **2.97** |
+
+The mean number of intents per **positive** document (i.e. a document
+with at least one non-`NONE` intent) is **2.97** — 2,000 intent
+assignments over 674 positive documents. The same figure holds for
+fraud-only documents (email fraud + SMS fraud). This motivates the
+multi-label formulation.
 
 ## Cross-channel distribution
 
+Distribution of annotated documents by channel and annotation outcome.
+
 | Channel | Total | With intents | NONE |
 |---|---:|---:|---:|
-| email | 421 | 277 | 144 |
-| sms | 416 | 352 | 64 |
-| forum | 113 | 45 | 68 |
+| email (fraud + legit) | 421 | 277 | 144 |
+| sms (fraud only) | 416 | 352 | 64 |
+| forum (mention only) | 113 | 45 | 68 |
 | **Total** | **950** | **674** | **276** |
+
+Note on channel composition:
+
+- **email 421** includes both fraudulent emails (use) and legitimate
+  emails (legit). Legitimate emails are annotated but expected to receive
+  the `NONE` token.
+- **sms 416** are all fraudulent (use label).
+- **forum 113** are all mention-only; a forum post discusses fraud but
+  does not commit it. Annotation of forum is the hardest task in the
+  corpus, and the low positive rate (45 / 113) reflects this.
+
+Telegram is not annotated (it is retained only as a cross-channel
+baseline for LOO evaluation), which is why 950 = 421 + 416 + 113.
