@@ -1,9 +1,10 @@
 # The Italian Fraud Intent Taxonomy (IFIT)
 
-12 intents, multi-label, in two families. Adapted from DIDECO (Popovic
-et al., 2026) for Italian and narrowed to 12 categories to reflect the
-observation that most Italian fraud messages target 2–3 intents
-simultaneously (mean 2.97 in our annotated corpus).
+12 intents, multi-label, in two families. Adapted from DIDECO
+(Popovic et al., 2026) for Italian and narrowed to 12 categories to
+reflect the observation that most Italian fraud messages target 2–3
+intents simultaneously (mean **2.97** intents per positive document in
+our annotated corpus).
 
 ## Explicit requests (5)
 
@@ -46,26 +47,28 @@ spear-phishing emails. IFIT is deliberately narrower because:
 
 ## Annotation statistics (950 documents)
 
-| Intent | Support | Mean intents/doc (positive) |
-|---|---|---|
-| `click_request` | 465 | — |
-| `urgency` | 411 | — |
-| `authority` | 244 | — |
-| `impersonation` | 204 | — |
-| `fear` | 199 | — |
-| `credential_request` | 179 | — |
-| `payment_request` | 121 | — |
-| `data_request` | 105 | — |
-| `greed` | 42 | — |
-| `call_request` | 24 | — |
-| `social_proof` | 3 | — |
-| `reciprocity` | 3 | — |
-| **Overall** | — | **2.97** |
+Per-intent support over the annotated corpus:
+
+| Intent | Support |
+|---|---:|
+| `click_request` | 465 |
+| `urgency` | 411 |
+| `authority` | 244 |
+| `impersonation` | 204 |
+| `fear` | 199 |
+| `credential_request` | 179 |
+| `payment_request` | 121 |
+| `data_request` | 105 |
+| `greed` | 42 |
+| `call_request` | 24 |
+| `social_proof` | 3 |
+| `reciprocity` | 3 |
+| **Mean intents/doc (positive only)** | **2.97** |
 
 ## Cross-channel distribution
 
 | Channel | Total | With intents | NONE |
-|---|---|---|---|
+|---|---:|---:|---:|
 | email | 421 | 277 | 144 |
 | sms | 416 | 352 | 64 |
 | forum | 113 | 45 | 68 |
