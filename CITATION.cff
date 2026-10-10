@@ -1,15 +1,15 @@
 cff-version: 1.2.0
 message: "If you use this software or data, please cite both the paper and this repository."
-title: "CIC-Intents: Channel-Invariant, Interpretable and Causally Grounded Intent Detection for Italian Multi-Channel Fraud"
+title: "CIC-Intents"
 abstract: >
-  Fraud detection systems that operate across multiple communication
-  channels face a structural obstacle: a model trained on one channel
-  rarely survives the move to another. We study this problem in the
-  Italian fraud landscape and propose CIC-Intents, a framework that
-  combines a 12-intent multi-label taxonomy (IFIT), a Multi-Label
-  Supervised Contrastive objective, a kernel MMD regularizer with
-  post-hoc channel centering, and a gradient-based causal attribution
-  procedure based on Probability of Necessity and Sufficiency.
+  CIC-Intents is the reference implementation for the paper "Channel
+  Shortcuts in Italian Multi-Channel Fraud Intent Detection". It
+  provides the Italian Fraud Intent Taxonomy (IFIT, 12 multi-label
+  intents), the training and evaluation code for the CIC-Intents
+  framework (Multi-Label SupCon + kernel MMD + Post-hoc Channel
+  Centering), the gradient-based causal attribution procedure
+  (PN / PS), and all scripts needed to reproduce the figures and
+  tables in the paper.
 authors:
   - family-names: Bilikhodze
     given-names: Mariia
@@ -39,7 +39,7 @@ version: 1.0.0
 date-released: "2026-10-07"
 preferred-citation:
   type: article
-  title: "CIC-Intents: Channel-Invariant, Interpretable and Causally Grounded Intent Detection for Italian Multi-Channel Fraud"
+  title: "Channel Shortcuts in Italian Multi-Channel Fraud Intent Detection"
   authors:
     - family-names: Bilikhodze
       given-names: Mariia
