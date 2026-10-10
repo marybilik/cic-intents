@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
-from sklearn.metrics import mutual_info_score, accuracy_score
+from sklearn.metrics import normalized_mutual_info_score, accuracy_score
 from torch.utils.data import DataLoader
 
 from .model import CICLDataset
@@ -130,18 +130,20 @@ def get_cls_embeddings(model, df, tokenizer, device, max_len=160,
 # Domain MI probe
 # ----------------------------------------------------------------
 def domain_mi_cv(embs, channels, n_splits=5, seed=RANDOM_STATE):
-    """Domain MI proxy.
+    """Domain MI proxy: NMI between channel labels and probe predictions.
 
-    Returns (mutual_info_score, probe_accuracy). This matches the notebook
-    protocol used to produce Table 12 in the paper (MI 0.739 -> 0.335).
+    Returns (normalized_mutual_info_score, probe_accuracy).
 
-    Notes:
-      * Uses mutual_info_score (not normalized), consistent with the paper.
-      * n_splits is capped at the smallest non-empty class count, computed
-        via np.unique (not np.bincount, which breaks when channel ids are
-        not contiguous).
-      * LogisticRegression is instantiated with the same hyperparameters as
-        in the notebook (max_iter=3000, class_weight='balanced', seed=42).
+    The paper reports **NMI** values everywhere (0.676 for raw CLS,
+    0.116 for centered CLS, 0.442 for the full model under the
+    test-means protocol, 0.380 for BCE-only under the same protocol).
+    Using unnormalized `mutual_info_score` here would produce different
+    numbers and break the trace from code to paper.
+
+    n_splits is capped at the smallest non-empty class count, computed
+    via np.unique (not np.bincount, which breaks when channel ids are
+    not contiguous). LogisticRegression uses max_iter=3000 and
+    class_weight='balanced'.
     """
     channels = np.asarray(channels).astype(int)
     embs = np.asarray(embs, dtype=np.float32)
@@ -156,5 +158,5 @@ def domain_mi_cv(embs, channels, n_splits=5, seed=RANDOM_STATE):
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
     preds = cross_val_predict(clf, embs, channels, cv=skf)
 
-    return (float(mutual_info_score(channels, preds)),
+    return (float(normalized_mutual_info_score(channels, preds)),
             float(accuracy_score(channels, preds)))
