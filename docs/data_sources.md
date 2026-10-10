@@ -56,8 +56,9 @@ cleaning), and cross-source deduplication:
 | Forum | 312 | 0 | 312 | mention |
 | **Total** | **4,376** | **1,667** | **2,709** | |
 
-Annotation covers **950 documents** — email fraud 421, SMS fraud 416,
-forum 113, Telegram 0 (Telegram is baseline-only, not annotated).
+Annotation covers **950 documents** — email 421 (fraud + legit),
+SMS 416 (fraud only), forum 113 (mention), Telegram 0
+(Telegram is baseline-only, not annotated).
 
 ## Licensing
 
