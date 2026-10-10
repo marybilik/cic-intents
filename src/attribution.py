@@ -21,10 +21,17 @@ import torch
 from transformers import AutoTokenizer
 
 from .model import CICLMMDv2
+from .utils import parse_multihot
 
 
 def _topk_tokens(model, input_ids, attention_mask, target_intent, k, device):
-    """Return indices of top-k tokens by gradient×input saliency."""
+    """Return indices of top-k tokens by gradient×input saliency.
+
+    Padding positions (attention_mask == 0) are masked out. Special
+    tokens such as <s> (position 0) and </s> are not explicitly removed:
+    the attention mask already excludes padding, and BOS/EOS do not carry
+    intent information, so they rarely enter the top-k.
+    """
     ids = input_ids.to(device).unsqueeze(0)
     mask = attention_mask.to(device).unsqueeze(0)
 
@@ -37,12 +44,8 @@ def _topk_tokens(model, input_ids, attention_mask, target_intent, k, device):
     score.backward()
 
     saliency = (emb.grad * emb).norm(dim=-1).squeeze(0)
-    # Exclude [CLS], [SEP], [PAD] by convention (indices 0/1/2 for RoBERTa)
     valid = mask.squeeze(0).bool()
     saliency = saliency.masked_fill(~valid, float('-inf'))
-    for special in (0, 1, 2):
-        if special < saliency.numel():
-            saliency[special] = float('-inf')
 
     topk = torch.topk(saliency, k).indices.cpu().tolist()
     return topk
@@ -92,10 +95,9 @@ def compute_pnps(model, df, tokenizer, device, ks=(5, 10, 20),
                 # f_t(x \ T_k)
                 f_no_topk = _prob_with_masked_tokens(
                     model, ids, am, t, topk, device, mask_token_id)
-                # f_t(T_k) -- keep only top-k, mask the rest
+                # f_t(T_k): keep only top-k, mask the rest
                 rest = [i for i in range(ids.numel())
-                        if am[i].item() == 1 and i not in topk
-                        and i not in (0, 1)]
+                        if am[i].item() == 1 and i not in topk]
                 f_only_topk = _prob_with_masked_tokens(
                     model, ids, am, t, rest, device, mask_token_id)
 
@@ -131,8 +133,7 @@ def _main():
 
     df = pd.read_csv(args.data)
     df['multihot'] = df['multihot'].apply(
-        lambda s: np.array(eval(s), dtype=np.float32)
-        if isinstance(s, str) else np.asarray(s, dtype=np.float32))
+        lambda s: parse_multihot(s, args.n_intents))
 
     pnps = compute_pnps(model, df, tokenizer, device,
                         n_examples=args.n_examples)
